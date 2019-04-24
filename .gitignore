@@ -22,3 +22,5 @@ static/node_modules
 .vscode
 tags
 .sass-cache
+
+.idea
