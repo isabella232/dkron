@@ -24,3 +24,5 @@ tags
 .sass-cache
 
 .idea
+dkron/assets/assets_vfsdata.go
+dkron/templates/templates_vfsdata.go
