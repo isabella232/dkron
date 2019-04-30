@@ -15,7 +15,7 @@ import (
 
 	"github.com/abronan/leadership"
 	"github.com/abronan/valkeyrie/store"
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/serf/serf"
 	"github.com/sirupsen/logrus"
@@ -551,37 +551,49 @@ func (a *Agent) join(addrs []string, replay bool) (n int, err error) {
 	return
 }
 
+// find the node which matches all the tags of job and only can limit 1 tag of count
 func (a *Agent) processFilteredNodes(job *Job) ([]string, map[string]string, error) {
 	var nodes []string
+	var count int
 	tags := make(map[string]string)
 
 	// Actually copy the map
 	for key, val := range job.Tags {
-		tags[key] = val
-	}
-
-	for jtk, jtv := range tags {
-		var tc []string
-		if tc = strings.Split(jtv, ":"); len(tc) == 2 {
+		if tc := strings.Split(val, ":"); len(tc) == 2 {
 			tv := tc[0]
 
 			// Set original tag to clean tag
-			tags[jtk] = tv
+			tags[key] = tv
 
-			count, err := strconv.Atoi(tc[1])
+			var err error
+			count, err = strconv.Atoi(tc[1])
 			if err != nil {
 				return nil, nil, err
 			}
+		} else {
+			tags[key] = val
+		}
+	}
 
-			for _, member := range a.serf.Members() {
-				if member.Status == serf.StatusAlive {
-					for mtk, mtv := range member.Tags {
-						if mtk == jtk && mtv == tv {
-							if len(nodes) < count {
-								nodes = append(nodes, member.Name)
-							}
-						}
+	for _, member := range a.serf.Members() {
+		if member.Status == serf.StatusAlive {
+			match := true
+			for jtk, jtv := range tags {
+				found := false
+				for mtk, mtv := range member.Tags {
+					if mtk == jtk && mtv == jtv {
+						found = true
+						break
 					}
+				}
+				if !found {
+					match = false
+					break
+				}
+			}
+			if match {
+				if len(nodes) < count {
+					nodes = append(nodes, member.Name)
 				}
 			}
 		}

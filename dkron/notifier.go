@@ -2,6 +2,7 @@ package dkron
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -36,6 +37,9 @@ func (n *Notifier) Send() {
 	}
 	if n.Config.WebhookURL != "" && n.Config.WebhookPayload != "" {
 		n.callExecutionWebhook()
+	}
+	if n.Config.CallbackURL != "" {
+		n.callExecutionCallback()
 	}
 }
 
@@ -94,6 +98,23 @@ func (n *Notifier) buildTemplate(templ string) *bytes.Buffer {
 	return out
 }
 
+func (n *Notifier) buildJson() *bytes.Reader {
+	data := struct {
+		JobName       string
+		Success       bool
+	}{
+		n.Execution.JobName,
+		n.Execution.Success,
+	}
+
+	bytesOut, err := json.Marshal(data)
+	if err != nil {
+		log.WithError(err).Error("notifier: error executing template")
+		return bytes.NewReader([]byte("Failed to execute template:" + err.Error()))
+	}
+	return bytes.NewReader(bytesOut)
+}
+
 func (n *Notifier) sendExecutionEmail() {
 	var data *bytes.Buffer
 	if n.Config.MailPayload != "" {
@@ -135,6 +156,29 @@ func (n *Notifier) callExecutionWebhook() {
 		}
 	}
 
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.WithError(err).Error("notifier: Error posting notification")
+	}
+	defer resp.Body.Close()
+
+	body, _ := ioutil.ReadAll(resp.Body)
+	log.WithFields(logrus.Fields{
+		"status": resp.Status,
+		"header": resp.Header,
+		"body":   string(body),
+	}).Debug("notifier: Webhook call response")
+}
+
+func (n *Notifier) callExecutionCallback() {
+	out := n.buildJson()
+	req, err := http.NewRequest("POST", n.Config.CallbackURL, out)
+	if err != nil {
+		log.WithError(err).Error("notifier: Error posting notification")
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {

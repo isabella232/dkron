@@ -51,6 +51,8 @@ type Config struct {
 	WebhookPayload string   `mapstructure:"webhook-payload"`
 	WebhookHeaders []string `mapstructure:"webhook-headers"`
 
+	CallbackURL	string `mapstructure:"callback-url"`
+
 	// DogStatsdAddr is the address of a dogstatsd instance. If provided,
 	// metrics will be sent to that instance
 	DogStatsdAddr string `mapstructure:"dog-statsd-addr"`
