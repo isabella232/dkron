@@ -183,8 +183,13 @@ func (n *Notifier) callExecutionCallback() {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.WithError(err).Error("notifier: Error posting notification")
+		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
+	}()
 
 	body, _ := ioutil.ReadAll(resp.Body)
 	log.WithFields(logrus.Fields{
