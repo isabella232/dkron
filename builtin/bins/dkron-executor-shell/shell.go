@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/base64"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -87,17 +89,27 @@ func (s *Shell) ExecuteImpl(args *dkron.ExecuteRequest) ([]byte, error) {
 		return nil, err
 	}
 
+	writePid(cmd, args.JobName)
+
 	// Warn if buffer is overritten
 	if output.TotalWritten() > output.Size() {
 		log.Printf("shell: Script '%s' generated %d bytes of output, truncated to %d", command, output.TotalWritten(), output.Size())
 	}
-
 	err = cmd.Wait()
 
 	// Always log output
 	log.Printf("shell: Command output %s", output)
 
 	return output.Bytes(), err
+}
+
+func writePid(cmd *exec.Cmd, jobName string) {
+	if cmd.Process != nil {
+		err := ioutil.WriteFile("/dkron/pids/"+jobName, []byte(fmt.Sprintf("%d", cmd.Process.Pid)), 0666)
+		if err != nil {
+			log.Printf("shell: Error while writing pid file for %s, error: %v", jobName, err)
+		}
+	}
 }
 
 // Determine the shell invocation based on OS
