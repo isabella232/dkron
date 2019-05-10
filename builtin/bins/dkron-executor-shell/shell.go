@@ -89,7 +89,9 @@ func (s *Shell) ExecuteImpl(args *dkron.ExecuteRequest) ([]byte, error) {
 		return nil, err
 	}
 
-	writePid(cmd, args.JobName)
+	if killCommand, ok := args.Config["nopid"]; !ok || killCommand != "true" {
+		writePid(cmd, args.JobName)
+	}
 
 	// Warn if buffer is overritten
 	if output.TotalWritten() > output.Size() {

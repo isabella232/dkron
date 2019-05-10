@@ -173,7 +173,7 @@ func (n *Notifier) callExecutionWebhook() {
 
 func (n *Notifier) callExecutionCallback() {
 	out := n.buildJson()
-	req, err := http.NewRequest("POST", n.Config.CallbackURL, out)
+	req, err := http.NewRequest("POST", n.Config.CallbackURL + "/v1/jobs/report", out)
 	if err != nil {
 		log.WithError(err).Error("notifier: Error posting notification")
 		return

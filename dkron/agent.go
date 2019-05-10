@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"runtime"
 	"strconv"
 	"strings"
@@ -430,7 +431,11 @@ func (a *Agent) eventLoop() {
 
 			// Log all member events
 			if me, ok := e.(serf.MemberEvent); ok {
+				memberDown := e.EventType() == serf.EventMemberFailed || e.EventType() == serf.EventMemberLeave
 				for _, member := range me.Members {
+					if memberDown && a.config.CallbackURL != "" {
+						a.memberFailCallback(member.Name)
+					}
 					log.WithFields(logrus.Fields{
 						"node":   a.config.NodeName,
 						"member": member.Name,
@@ -525,6 +530,37 @@ func (a *Agent) eventLoop() {
 			log.Warn("agent: Serf shutdown detected, quitting")
 			return
 		}
+	}
+}
+
+func (a *Agent) memberFailCallback(nodeName string)  {
+	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/v1/nodes/%s/down", a.config.CallbackURL, nodeName), nil)
+	if err != nil {
+		log.WithError(err).Error("memberFailCallback: Error callback memberFail")
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.WithError(err).Error("memberFailCallback: Error callback memberFail")
+		return
+	}
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
+	}()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.WithError(err).Error("memberFailCallback: Error callback memberFail")
+	} else {
+		log.WithFields(logrus.Fields{
+			"status": resp.Status,
+			"header": resp.Header,
+			"body":   string(body),
+		}).Debug("memberFailCallback: memberFailCallback response")
 	}
 }
 
