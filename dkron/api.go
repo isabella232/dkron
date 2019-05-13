@@ -205,7 +205,7 @@ func (h *HTTPTransport) jobRunHandler(c *gin.Context) {
 
 func (h *HTTPTransport) executionsHandler(c *gin.Context) {
 	jobName := c.Param("job")
-	ignoreOutput := c.Param("ignoreOutput")
+	ignoreOutput := c.Query("ignoreOutput")
 
 	job, err := h.agent.Store.GetJob(jobName, nil)
 	if err != nil {
