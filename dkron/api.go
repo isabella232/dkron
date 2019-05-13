@@ -205,6 +205,7 @@ func (h *HTTPTransport) jobRunHandler(c *gin.Context) {
 
 func (h *HTTPTransport) executionsHandler(c *gin.Context) {
 	jobName := c.Param("job")
+	ignoreOutput := c.Param("ignoreOutput")
 
 	job, err := h.agent.Store.GetJob(jobName, nil)
 	if err != nil {
@@ -222,6 +223,13 @@ func (h *HTTPTransport) executionsHandler(c *gin.Context) {
 		return
 
 	}
+
+	if ignoreOutput == "true" {
+		for i := 0; i < len(executions); i++ {
+			executions[i].Output = nil
+		}
+	}
+
 	renderJSON(c, http.StatusOK, executions)
 }
 

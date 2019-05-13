@@ -587,7 +587,7 @@ func (a *Agent) join(addrs []string, replay bool) (n int, err error) {
 	return
 }
 
-// find the node which matches all the tags of job and only can limit 1 tag of count
+// find the node which matches all the tags of job
 func (a *Agent) processFilteredNodes(job *Job) ([]string, map[string]string, error) {
 	var nodes []string
 	var count int
